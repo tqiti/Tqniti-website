@@ -18,38 +18,27 @@ const io = new IntersectionObserver(entries => {
 }, { threshold: 0.12 });
 document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
-// ---------- Practice quiz ----------
-const PASSAGE = 'النحلة حشرة نافعة، تطير من زهرة إلى زهرة لتجمع الرحيق، ثم تصنع منه العسل الذي فيه شفاء للناس. وتعيش النحل في خلايا منظمة، لكل نحلة فيها عمل تقوم به بإتقان.';
+// ---------- Mock tests ----------
+const BANK = window.NAFES_BANK;
+const LEVELS = { k: 'معرفة', a: 'تطبيق', r: 'استدلال' };
+const GRADES = { 3: 'الثالث الابتدائي', 6: 'السادس الابتدائي', 9: 'الثالث المتوسط' };
+const AR_DIGITS = '٠١٢٣٤٥٦٧٨٩';
 
-const BANK = {
-  math: [
-    { q: 'ما ناتج ٣/٤ من العدد ٢٠؟', o: ['١٢', '١٥', '١٦', '٥'], a: 1, e: '٢٠ ÷ ٤ = ٥، ثم ٥ × ٣ = ١٥.' },
-    { q: 'ما ناتج ٢٤٥ + ٣٧٨؟', o: ['٦١٣', '٥٢٣', '٦٢٣', '٦٣٣'], a: 2, e: 'نجمع الآحاد ثم العشرات ثم المئات مع مراعاة الحمل: ٦٢٣.' },
-    { q: 'مستطيل طوله ٨ سم وعرضه ٥ سم، ما محيطه؟', o: ['١٣ سم', '٤٠ سم', '٣٠ سم', '٢٦ سم'], a: 3, e: 'المحيط = ٢ × (الطول + العرض) = ٢ × ١٣ = ٢٦ سم.' },
-    { q: 'أيّ الأعداد التالية عدد أوّلي؟', o: ['٢١', '٢٩', '٢٧', '٣٣'], a: 1, e: '٢٩ لا يقبل القسمة إلا على ١ وعلى نفسه.' },
-    { q: 'الكسر الذي يساوي ٠٫٥ هو:', o: ['١/٢', '١/٥', '٥/١', '٢/٥'], a: 0, e: '٠٫٥ = ٥/١٠ = ١/٢.' }
-  ],
-  reading: [
-    { q: 'ماذا تصنع النحلة من الرحيق؟', o: ['الشمع', 'العسل', 'الخلايا', 'الأزهار'], a: 1, e: 'ورد في النص: «ثم تصنع منه العسل».' },
-    { q: 'مرادف كلمة «نافعة» في النص:', o: ['ضارة', 'سريعة', 'مفيدة', 'صغيرة'], a: 2, e: 'النافع هو المفيد.' },
-    { q: 'مفرد كلمة «خلايا»:', o: ['خليّة', 'خلاء', 'خال', 'خلوة'], a: 0, e: 'خلايا جمع خليّة.' },
-    { q: 'الفكرة الرئيسة للنص هي:', o: ['ألوان الأزهار', 'فوائد النحلة ونظام حياتها', 'طريقة بيع العسل', 'أنواع الحشرات'], a: 1, e: 'يتحدث النص عن نفع النحلة وتنظيم حياتها في الخلية.' },
-    { q: 'نوع الكلمة «تجمع» في النص:', o: ['اسم', 'حرف', 'فعل ماضٍ', 'فعل مضارع'], a: 3, e: '«تجمع» فعل يدل على حدث في الزمن الحاضر، فهو فعل مضارع.' }
-  ],
-  science: [
-    { q: 'العضو المسؤول عن ضخ الدم في جسم الإنسان هو:', o: ['الرئتان', 'المعدة', 'القلب', 'الكبد'], a: 2, e: 'القلب عضلة تضخ الدم إلى جميع أجزاء الجسم.' },
-    { q: 'تحوّل المادة من الحالة الصلبة إلى السائلة يسمى:', o: ['التبخر', 'الانصهار', 'التكثف', 'التجمد'], a: 1, e: 'الانصهار: تحوّل الصلب إلى سائل عند تسخينه، مثل ذوبان الجليد.' },
-    { q: 'ما مصدر الطاقة الذي تستخدمه النباتات لصنع غذائها؟', o: ['ضوء الشمس', 'التربة', 'الرياح', 'القمر'], a: 0, e: 'تصنع النباتات غذاءها بعملية البناء الضوئي مستخدمة ضوء الشمس.' },
-    { q: 'أيّ المواد التالية موصلة جيدة للكهرباء؟', o: ['الخشب', 'البلاستيك', 'الزجاج', 'النحاس'], a: 3, e: 'الفلزات مثل النحاس موصلة جيدة للكهرباء.' },
-    { q: 'الكوكب الأقرب إلى الشمس هو:', o: ['الأرض', 'المريخ', 'عطارد', 'الزهرة'], a: 2, e: 'عطارد هو أقرب كواكب المجموعة الشمسية إلى الشمس.' }
-  ]
-};
+// Display numbers with Arabic-Indic digits, Arabic decimal separator and percent sign.
+const fmt = s => String(s)
+  .replace(/(\d)\.(\d)/g, '$1٫$2')
+  .replace(/%/g, '٪')
+  .replace(/\d/g, d => AR_DIGITS[d]);
 
-const NAMES = { math: 'الرياضيات', reading: 'القراءة', science: 'العلوم' };
-const toAr = n => n.toLocaleString('ar-EG');
-const card = document.getElementById('quizCard');
-const tabs = document.querySelectorAll('[data-subject]');
-let subject = 'math', idx = 0, score = 0;
+// Arabic counted noun: ٣–١٠ أسئلة، ١١–٩٩ سؤالاً، ١٠٠ سؤال
+function qCount(n) {
+  const r = n % 100;
+  if (n === 1) return 'سؤال واحد';
+  if (n === 2) return 'سؤالان';
+  if (r >= 3 && r <= 10) return fmt(n) + ' أسئلة';
+  if (r >= 11) return fmt(n) + ' سؤالاً';
+  return fmt(n) + ' سؤال';
+}
 
 function el(tag, cls, text) {
   const n = document.createElement(tag);
@@ -58,99 +47,303 @@ function el(tag, cls, text) {
   return n;
 }
 
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+const gradesOf = subj => [...new Set(BANK[subj].items.map(q => q.g))].sort((x, y) => x - y);
+
+const card = document.getElementById('quizCard');
+const tabsWrap = document.getElementById('subjectTabs');
+let subject = 'math';
+let setup = { grade: 'all', domain: 'all', count: '10' };
+let run = null;
+let timer = null;
+
+function stopTimer() { if (timer) { clearInterval(timer); timer = null; } }
+function elapsed() { return Math.floor((Date.now() - run.start) / 1000); }
+function clock(sec) {
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return fmt(`${m}:${String(s).padStart(2, '0')}`);
+}
+
+function pool() {
+  return BANK[subject].items.filter(q =>
+    (setup.grade === 'all' || q.g === Number(setup.grade)) &&
+    (setup.domain === 'all' || q.d === setup.domain));
+}
+
+// Tabs
+Object.entries(BANK).forEach(([key, s]) => {
+  const b = el('button', 'filter', `${s.icon} ${s.name}`);
+  b.dataset.subject = key;
+  b.setAttribute('role', 'tab');
+  b.addEventListener('click', () => {
+    subject = key;
+    setup = { grade: 'all', domain: 'all', count: setup.count };
+    renderSetup();
+  });
+  tabsWrap.append(b);
+});
+
+function syncTabs() {
+  tabsWrap.querySelectorAll('[data-subject]').forEach(t => {
+    const on = t.dataset.subject === subject;
+    t.classList.toggle('is-active', on);
+    t.setAttribute('aria-selected', String(on));
+  });
+}
+
+function selectField(label, name, options, value) {
+  const wrap = el('label', 'quiz__field');
+  wrap.append(el('span', null, label));
+  const sel = el('select');
+  sel.name = name;
+  options.forEach(([v, t]) => {
+    const o = el('option', null, t);
+    o.value = v;
+    if (String(v) === String(value)) o.selected = true;
+    sel.append(o);
+  });
+  wrap.append(sel);
+  return [wrap, sel];
+}
+
+function renderSetup() {
+  stopTimer();
+  run = null;
+  syncTabs();
+  const S = BANK[subject];
+  card.replaceChildren();
+
+  card.append(el('h3', 'quiz__title', `إعدادات اختبار ${S.name}`));
+  const grid = el('div', 'quiz__setup');
+  const [gWrap, gSel] = selectField('الصف', 'grade',
+    [['all', 'جميع الصفوف'], ...gradesOf(subject).map(g => [g, 'الصف ' + GRADES[g]])], setup.grade);
+  const [dWrap, dSel] = selectField('المعيار', 'domain',
+    [['all', 'جميع المعايير'], ...Object.entries(S.domains).map(([k, d]) => [k, d.name])], setup.domain);
+  const [cWrap, cSel] = selectField('عدد الأسئلة', 'count',
+    [['10', qCount(10)], ['20', qCount(20)], ['30', qCount(30)], ['all', 'جميع الأسئلة المتاحة']], setup.count);
+  grid.append(gWrap, dWrap, cWrap);
+
+  const info = el('p', 'quiz__info');
+  const desc = el('p', 'quiz__desc');
+  const startBtn = el('button', 'btn btn--primary', 'ابدأ الاختبار');
+  startBtn.type = 'button';
+
+  const update = () => {
+    setup = { grade: gSel.value, domain: dSel.value, count: cSel.value };
+    const n = pool().length;
+    const take = setup.count === 'all' ? n : Math.min(n, Number(setup.count));
+    info.textContent = n
+      ? 'الأسئلة المتاحة: ' + fmt(n) + ' — سيتضمن الاختبار ' + qCount(take)
+      : 'لا توجد أسئلة بهذه الإعدادات.';
+    desc.textContent = setup.domain === 'all' ? '' : S.domains[setup.domain].desc;
+    startBtn.disabled = n === 0;
+  };
+  [gSel, dSel, cSel].forEach(x => x.addEventListener('change', update));
+  startBtn.addEventListener('click', startRun);
+  update();
+
+  card.append(grid, desc, info, startBtn);
+}
+
+function startRun() {
+  let list = shuffle(pool());
+  if (setup.count !== 'all') list = list.slice(0, Number(setup.count));
+  // Keep questions about the same reading passage together.
+  const first = new Map();
+  list.forEach((q, i) => { const k = q.p || q; if (!first.has(k)) first.set(k, i); });
+  list.sort((x, y) => first.get(x.p || x) - first.get(y.p || y));
+
+  run = { list, idx: 0, answers: [], start: Date.now() };
+  stopTimer();
+  timer = setInterval(() => {
+    const t = document.getElementById('quizClock');
+    if (t) t.textContent = '⏱ ' + clock(elapsed());
+  }, 1000);
+  renderQuestion();
+  document.getElementById('practice').scrollIntoView({ block: 'start' });
+}
+
 function renderQuestion() {
-  const list = BANK[subject];
+  const S = BANK[subject];
+  const { list, idx } = run;
   const item = list[idx];
   card.replaceChildren();
 
   const head = el('div', 'quiz__head');
-  head.append(el('span', null, `سؤال ${toAr(idx + 1)} من ${toAr(list.length)}`), el('span', null, NAMES[subject]));
+  const clockEl = el('span', null, '⏱ ' + clock(elapsed()));
+  clockEl.id = 'quizClock';
+  head.append(el('span', null, fmt(`سؤال ${idx + 1} من ${list.length}`)), clockEl);
   const bar = el('div', 'mock__progress');
-  const fill = el('span'); fill.style.width = `${(idx / list.length) * 100}%`;
+  const fill = el('span');
+  fill.style.width = `${(idx / list.length) * 100}%`;
   bar.append(fill);
-  card.append(head, bar);
 
-  if (subject === 'reading') {
-    const p = el('blockquote', 'quiz__passage');
-    p.append(el('b', null, 'اقرأ النص ثم أجب: '), document.createTextNode(PASSAGE));
-    card.append(p);
+  const chips = el('div', 'quiz__chips');
+  chips.append(
+    el('span', 'chip', S.domains[item.d].name),
+    el('span', 'chip chip--soft', LEVELS[item.l]),
+    el('span', 'chip chip--soft', 'الصف ' + GRADES[item.g])
+  );
+  card.append(head, bar, chips);
+
+  if (item.p) {
+    const P = S.passages[item.p];
+    const box = el('blockquote', 'quiz__passage');
+    box.append(el('b', null, `اقرأ النص ثم أجب — «${P.title}»`), el('p', null, fmt(P.text)));
+    card.append(box);
   }
 
-  card.append(el('h3', 'quiz__q', item.q));
+  card.append(el('h3', 'quiz__q', fmt(item.q)));
   const opts = el('div', 'quiz__opts');
   const feedback = el('p', 'quiz__fb');
   const next = el('button', 'btn btn--primary', idx === list.length - 1 ? 'عرض النتيجة' : 'السؤال التالي');
+  next.type = 'button';
   next.hidden = true;
 
-  item.o.forEach((text, i) => {
-    const b = el('button', 'quiz__opt', text);
+  const order = shuffle(item.o.map((t, i) => i)); // index 0 is the correct answer
+  order.forEach(i => {
+    const b = el('button', 'quiz__opt', fmt(item.o[i]));
     b.type = 'button';
+    b.dataset.i = i;
     b.addEventListener('click', () => {
-      opts.querySelectorAll('button').forEach(x => (x.disabled = true));
-      opts.children[item.a].classList.add('is-right');
-      if (i === item.a) {
-        score++;
-        feedback.textContent = '✔ إجابة صحيحة! ' + item.e;
-        feedback.className = 'quiz__fb ok';
-      } else {
-        b.classList.add('is-wrong');
-        feedback.textContent = '✘ إجابة غير صحيحة. ' + item.e;
-        feedback.className = 'quiz__fb err';
-      }
+      opts.querySelectorAll('button').forEach(x => {
+        x.disabled = true;
+        if (x.dataset.i === '0') x.classList.add('is-right');
+      });
+      const ok = i === 0;
+      if (!ok) b.classList.add('is-wrong');
+      run.answers.push({ item, ok, chosen: item.o[i] });
+      const why = item.e ? ' ' + fmt(item.e) : '';
+      feedback.textContent = ok
+        ? '✔ إجابة صحيحة!' + why
+        : '✘ إجابة غير صحيحة. الإجابة الصحيحة: ' + fmt(item.o[0]) + '.' + why;
+      feedback.className = 'quiz__fb ' + (ok ? 'ok' : 'err');
       next.hidden = false;
-      next.focus();
+      next.focus({ preventScroll: true });
     });
     opts.append(b);
   });
 
   next.addEventListener('click', () => {
-    idx++;
-    idx < list.length ? renderQuestion() : renderResult();
+    run.idx++;
+    run.idx < list.length ? renderQuestion() : renderResult();
   });
 
   card.append(opts, feedback, next);
 }
 
+function breakdown(title, keyFn, nameFn) {
+  const groups = new Map();
+  run.answers.forEach(a => {
+    const k = keyFn(a.item);
+    const g = groups.get(k) || { ok: 0, n: 0 };
+    g.n++; if (a.ok) g.ok++;
+    groups.set(k, g);
+  });
+  const box = el('div', 'quiz__breakdown');
+  box.append(el('h4', null, title));
+  groups.forEach((g, k) => {
+    const pct = Math.round((g.ok / g.n) * 100);
+    const row = el('div', 'bd');
+    const label = el('div', 'bd__label');
+    label.append(el('span', null, nameFn(k)), el('span', 'bd__val', fmt(`${g.ok} من ${g.n} (${pct}%)`)));
+    const track = el('div', 'bd__track');
+    const fill = el('span', pct >= 80 ? 'is-high' : pct >= 50 ? 'is-mid' : 'is-low');
+    fill.style.width = Math.max(pct, 3) + '%';
+    track.append(fill);
+    row.append(label, track);
+    box.append(row);
+  });
+  return box;
+}
+
 function renderResult() {
-  const total = BANK[subject].length;
+  stopTimer();
+  const S = BANK[subject];
+  const total = run.answers.length;
+  const score = run.answers.filter(a => a.ok).length;
   const pct = Math.round((score / total) * 100);
-  const msg = pct >= 80 ? 'ممتاز! أنت مستعد بشكل رائع 🌟'
+  const msg = pct >= 80 ? 'ممتاز! مستواك متقدم 🌟'
     : pct >= 60 ? 'جيد جداً! واصل التدريب لتصل إلى التميز 💪'
-    : 'بداية جيدة! راجع الشرح وأعد المحاولة 📚';
+    : 'بداية جيدة! راجع المعايير التي تحتاج إلى تحسين ثم أعد المحاولة 📚';
+
   card.replaceChildren();
-  const box = el('div', 'quiz__result');
-  box.append(
-    el('div', 'quiz__score', `${toAr(score)} / ${toAr(total)}`),
+  const top = el('div', 'quiz__result');
+  top.append(
+    el('div', 'quiz__score', fmt(`${score} / ${total}`)),
     el('h3', null, msg),
-    el('p', null, `نسبة الإجابات الصحيحة في ${NAMES[subject]}: ${toAr(pct)}٪`)
+    el('p', null, fmt(`نسبة الإجابات الصحيحة في ${S.name}: ${pct}% — الزمن: `) + clock(elapsed()))
   );
-  const again = el('button', 'btn btn--primary', 'أعد المحاولة');
-  again.addEventListener('click', start);
-  const other = el('button', 'btn btn--ghost', 'جرّب مادة أخرى');
-  other.addEventListener('click', () => {
-    const keys = Object.keys(BANK);
-    selectSubject(keys[(keys.indexOf(subject) + 1) % keys.length]);
-  });
-  const actions = el('div', 'hero__cta');
-  actions.append(again, other);
-  box.append(actions);
-  card.append(box);
+  card.append(top);
+
+  card.append(
+    breakdown('الأداء حسب المعيار', q => q.d, k => S.domains[k].name),
+    breakdown('الأداء حسب المستوى المعرفي', q => q.l, k => LEVELS[k])
+  );
+
+  const wrong = run.answers.filter(a => !a.ok);
+  if (wrong.length) {
+    const det = el('details', 'quiz__review');
+    det.append(el('summary', null, fmt(`مراجعة الأخطاء (${wrong.length})`)));
+    const ol = el('ol');
+    wrong.forEach(a => {
+      const li = el('li');
+      li.append(
+        el('p', 'quiz__review-q', fmt(a.item.q)),
+        el('p', 'err', 'إجابتك: ' + fmt(a.chosen)),
+        el('p', 'ok', 'الصحيحة: ' + fmt(a.item.o[0]))
+      );
+      if (a.item.e) li.append(el('p', 'quiz__review-e', fmt(a.item.e)));
+      ol.append(li);
+    });
+    det.append(ol);
+    card.append(det);
+  }
+
+  const actions = el('div', 'hero__cta quiz__actions');
+  const again = el('button', 'btn btn--primary', 'اختبار جديد بنفس الإعدادات');
+  again.type = 'button';
+  again.addEventListener('click', startRun);
+  const change = el('button', 'btn btn--ghost', 'تغيير الإعدادات');
+  change.type = 'button';
+  change.addEventListener('click', renderSetup);
+  actions.append(again, change);
+  card.append(actions);
 }
 
-function start() { idx = 0; score = 0; renderQuestion(); }
+renderSetup();
 
-function selectSubject(s) {
-  subject = s;
-  tabs.forEach(t => {
-    const on = t.dataset.subject === s;
-    t.classList.toggle('is-active', on);
-    t.setAttribute('aria-selected', String(on));
+// ---------- Standards map ----------
+const map = document.getElementById('stdMap');
+Object.values(BANK).forEach(S => {
+  const box = el('article', 'std reveal is-visible');
+  const h = el('header', 'std__head');
+  h.append(el('h3', null, `${S.icon} ${S.name}`), el('span', 'chip', qCount(S.items.length)));
+  box.append(h);
+  const grades = [...new Set(S.items.map(q => q.g))].sort((x, y) => x - y);
+  box.append(el('p', 'std__grades', 'الصفوف: ' + grades.map(g => GRADES[g]).join('، ')));
+  const ul = el('ul', 'std__list');
+  Object.entries(S.domains).forEach(([k, d]) => {
+    const n = S.items.filter(q => q.d === k).length;
+    const li = el('li');
+    const t = el('div', 'std__row');
+    t.append(el('b', null, d.name), el('span', 'std__n', fmt(String(n))));
+    li.append(t, el('p', null, d.desc));
+    ul.append(li);
   });
-  start();
-}
-
-tabs.forEach(t => t.addEventListener('click', () => selectSubject(t.dataset.subject)));
-start();
+  box.append(ul);
+  const lv = Object.entries(LEVELS).map(([k, name]) => `${name} ${S.items.filter(q => q.l === k).length}`).join(' · ');
+  box.append(el('p', 'std__levels', fmt('المستويات المعرفية: ' + lv)));
+  map.append(box);
+});
 
 // ---------- Contact form ----------
 // Client-side validation only; connect to a backend or form service to receive submissions.

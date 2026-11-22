@@ -22,7 +22,8 @@
       <nav class="nav__links" id="navLinks" aria-label="القائمة الرئيسية">
         <a href="#about">عن نافس</a>
         <a href="#features">مميزات المنصة</a>
-        <a href="#practice">تدرّب الآن</a>
+        <a href="#practice">الاختبارات المحاكية</a>
+        <a href="#standards">المعايير</a>
         <a href="#audience">لمن المنصة</a>
         <a href="#tips">نصائح</a>
         <a href="#faq">الأسئلة الشائعة</a>
@@ -57,7 +58,7 @@
             <div class="mock__bar"><i></i><i></i><i></i></div>
             <div class="mock__body">
               <div class="qprev">
-                <b>سؤال ٣ من ١٠ · الرياضيات</b>
+                <b>سؤال ٣ من ١٠ · الأعداد والعمليات</b>
                 <p>ما ناتج ٣/٤ من ٢٠؟</p>
                 <span class="qprev__opt">١٢</span>
                 <span class="qprev__opt is-right">١٥ ✓</span>
@@ -78,7 +79,7 @@
         <div class="stat"><strong>٣</strong><span>صفوف دراسية</span></div>
         <div class="stat"><strong>٣</strong><span>مواد: القراءة، الرياضيات، العلوم</span></div>
         <div class="stat"><strong>فوري</strong><span>تصحيح وتغذية راجعة</span></div>
-        <div class="stat"><strong>مجاني</strong><span>للتدريب الأساسي</span></div>
+        <div class="stat"><strong>٣٠٠</strong><span>سؤال محاكٍ مصنّف حسب المعايير</span></div>
       </div>
     </section>
 
@@ -123,18 +124,26 @@
     <section class="section" id="practice">
       <div class="container container--narrow">
         <div class="section__head reveal">
-          <span class="eyebrow">تدرّب الآن</span>
-          <h2>جرّب اختباراً قصيراً</h2>
-          <p>اختر المادة وأجب عن ٥ أسئلة نموذجية، وستظهر نتيجتك فوراً.</p>
+          <span class="eyebrow">اختبارات محاكية</span>
+          <h2>٣٠٠ سؤال محاكٍ لاختبارات نافس</h2>
+          <p>١٠٠ سؤال لكل مادة، مصنفة حسب الصف والمعيار والمستوى المعرفي. اختر إعداداتك وابدأ، وستحصل في النهاية على تقرير أدائك في كل معيار.</p>
         </div>
         <div class="quiz" id="quiz">
-          <div class="quiz__tabs" role="tablist" aria-label="اختيار المادة">
-            <button class="filter is-active" data-subject="math" role="tab" aria-selected="true">🔢 الرياضيات</button>
-            <button class="filter" data-subject="reading" role="tab" aria-selected="false">📖 القراءة</button>
-            <button class="filter" data-subject="science" role="tab" aria-selected="false">🔬 العلوم</button>
-          </div>
+          <div class="quiz__tabs" id="subjectTabs" role="tablist" aria-label="اختيار المادة"></div>
           <div class="quiz__card" id="quizCard" aria-live="polite"></div>
         </div>
+      </div>
+    </section>
+
+    <!-- Standards map -->
+    <section class="section section--alt" id="standards">
+      <div class="container">
+        <div class="section__head reveal">
+          <span class="eyebrow">خريطة المعايير</span>
+          <h2>توزيع الأسئلة على المعايير</h2>
+          <p>تغطي الأسئلة جميع مجالات المحتوى في كل مادة، وتتدرج في ثلاثة مستويات معرفية: المعرفة، والتطبيق، والاستدلال.</p>
+        </div>
+        <div class="stdmap" id="stdMap"></div>
       </div>
     </section>
 
@@ -228,6 +237,9 @@
 
   <a href="#practice" class="fab" aria-label="ابدأ التدريب">✏️</a>
 
+  <script src="questions/math.js"></script>
+  <script src="questions/reading.js"></script>
+  <script src="questions/science.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
