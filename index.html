@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>تدرّب على نافس | منصة تقنيتي</title>
-  <meta name="description" content="منصة تدريبية للاستعداد لاختبارات نافس الوطنية: بنك أسئلة في القراءة والرياضيات والعلوم، اختبارات محاكية، ونصائح للطلاب والمعلمين وأولياء الأمور.">
+  <title>إنجاز نافس | تدرّب وتفوّق في اختبارات نافس</title>
+  <meta name="description" content="إنجاز نافس: منصة تدريبية للاستعداد لاختبارات نافس الوطنية: بنك أسئلة في القراءة والرياضيات والعلوم، اختبارات محاكية، ونصائح للطلاب والمعلمين وأولياء الأمور.">
   <meta name="theme-color" content="#0f766e">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,9 +15,9 @@
 
   <header class="nav" id="top">
     <div class="container nav__inner">
-      <a href="#top" class="logo" aria-label="تدرّب على نافس - الرئيسية">
-        <span class="logo__mark">ن</span>
-        <span>تدرّب على نافس</span>
+      <a href="#top" class="logo" aria-label="إنجاز نافس - الرئيسية">
+        <span class="logo__mark">إن</span>
+        <span>إنجاز نافس</span>
       </a>
       <nav class="nav__links" id="navLinks" aria-label="القائمة الرئيسية">
         <a href="#about">عن نافس</a>
@@ -27,7 +27,9 @@
         <a href="#audience">لمن المنصة</a>
         <a href="#tips">نصائح</a>
         <a href="#faq">الأسئلة الشائعة</a>
-        <a href="#contact" class="btn btn--primary btn--sm">سجّل مدرستك</a>
+        <a href="login.html" class="nav__auth" data-auth="guest">دخول</a>
+        <a href="register.html" class="btn btn--primary btn--sm" data-auth="guest">إنشاء حساب</a>
+        <a href="dashboard.html" class="btn btn--primary btn--sm" data-auth="user" hidden>لوحة التحكم</a>
       </nav>
       <button class="nav__toggle" id="navToggle" aria-label="فتح القائمة" aria-expanded="false" aria-controls="navLinks">
         <span></span><span></span><span></span>
@@ -197,41 +199,28 @@
       </div>
     </section>
 
-    <!-- Contact -->
-    <section class="section" id="contact">
-      <div class="container contact">
-        <div class="contact__info reveal">
-          <span class="eyebrow">سجّل مدرستك</span>
-          <h2>جهّز طلابك لنافس من اليوم</h2>
-          <p>أرسل بيانات مدرستك وسنتواصل معك لتفعيل الحساب وتدريب المعلمين على استخدام المنصة.</p>
-          <ul class="contact__list">
-            <li>📧 <span>info@tqniti.com</span></li>
-            <li>📞 <span dir="ltr">+966 5X XXX XXXX</span></li>
-          </ul>
+    <!-- Join -->
+    <section class="section" id="join">
+      <div class="container">
+        <div class="section__head reveal">
+          <span class="eyebrow">انضم إلى إنجاز نافس</span>
+          <h2>أنشئ حسابك وتابع التقدم خطوة بخطوة</h2>
+          <p>تُحفظ نتائج الطلاب تلقائياً، ويتابعها المعلمون والمدارس من لوحة التحكم.</p>
         </div>
-        <form class="form reveal" id="contactForm" novalidate>
-          <div class="form__row">
-            <label>اسم المسؤول<input type="text" name="name" required autocomplete="name"></label>
-            <label>رقم الجوال<input type="tel" name="phone" required autocomplete="tel" dir="ltr"></label>
-          </div>
-          <label>اسم المدرسة<input type="text" name="school" required autocomplete="organization"></label>
-          <label>البريد الإلكتروني<input type="email" name="email" required autocomplete="email" dir="ltr"></label>
-          <label>المرحلة
-            <select name="stage">
-              <option>ابتدائي</option><option>متوسط</option><option>ابتدائي ومتوسط</option>
-            </select>
-          </label>
-          <button type="submit" class="btn btn--primary btn--block">أرسل الطلب</button>
-          <p class="form__msg" id="formMsg" role="status" aria-live="polite"></p>
-        </form>
+        <div class="cards join">
+          <article class="card reveal"><div class="card__icon">🎒</div><h3>حساب طالب</h3><p>تدرّب على الاختبارات المحاكية، واحفظ نتائجك، وتابع مستواك في كل معيار.</p><a class="btn btn--primary btn--block" href="register.html?role=student">سجّل كطالب</a></article>
+          <article class="card reveal"><div class="card__icon">👩‍🏫</div><h3>حساب معلم</h3><p>تابع نتائج طلاب مدرستك، واعرف المعايير التي تحتاج إلى تعزيز.</p><a class="btn btn--ghost btn--block" href="register.html?role=teacher">سجّل كمعلم</a></article>
+          <article class="card reveal"><div class="card__icon">🏫</div><h3>حساب مدرسة</h3><p>أدِر معلمي المدرسة وطلابها، واطّلع على تقارير الجاهزية الشاملة.</p><a class="btn btn--ghost btn--block" href="register.html?role=school">سجّل مدرستك</a></article>
+        </div>
+        <p class="join__login">لديك حساب؟ <a href="login.html">سجّل الدخول</a></p>
       </div>
     </section>
   </main>
 
   <footer class="footer">
     <div class="container footer__inner">
-      <a href="#top" class="logo"><span class="logo__mark">ن</span><span>تدرّب على نافس</span></a>
-      <p>منصة تدريبية مستقلة من تقنيتي، غير تابعة لأي جهة حكومية. © <span id="year"></span></p>
+      <a href="#top" class="logo"><span class="logo__mark">إن</span><span>إنجاز نافس</span></a>
+      <p>إنجاز نافس منصة تدريبية مستقلة، غير تابعة لأي جهة حكومية. © <span id="year"></span></p>
     </div>
   </footer>
 
@@ -241,5 +230,6 @@
   <script src="questions/reading.js"></script>
   <script src="questions/science.js"></script>
   <script src="script.js"></script>
+  <script type="module" src="js/site-auth.js"></script>
 </body>
 </html>

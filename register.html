@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>إنشاء حساب | إنجاز نافس</title>
+  <meta name="theme-color" content="#0f766e">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="page-auth">
+  <header class="nav">
+    <div class="container nav__inner">
+      <a href="index.html" class="logo"><span class="logo__mark">إن</span><span>إنجاز نافس</span></a>
+      <a href="index.html" class="nav__back">→ الرئيسية</a>
+    </div>
+  </header>
+
+  <main class="auth">
+    <div class="auth__card auth__card--wide">
+      <h1>إنشاء حساب جديد</h1>
+      <p class="auth__sub">اختر نوع الحساب ثم أكمل بياناتك.</p>
+      <div id="setupNotice"></div>
+
+      <div class="quiz__tabs role-tabs" role="tablist" aria-label="نوع الحساب">
+        <button type="button" class="filter" data-role="student" role="tab">🎒 طالب</button>
+        <button type="button" class="filter" data-role="teacher" role="tab">👩‍🏫 معلم</button>
+        <button type="button" class="filter" data-role="school" role="tab">🏫 مدرسة</button>
+      </div>
+      <p class="role-note" id="roleNote"></p>
+
+      <form class="form form--flat" id="regForm" novalidate>
+        <label><span id="nameLabel">الاسم الكامل</span><input type="text" name="name" required autocomplete="name"></label>
+
+        <div data-for="school" class="form__group">
+          <label>اسم المدرسة<input type="text" name="schoolName" autocomplete="organization"></label>
+          <div class="form__row">
+            <label>المدينة<input type="text" name="city" autocomplete="address-level2"></label>
+            <label>المرحلة<select name="stage"></select></label>
+          </div>
+        </div>
+
+        <div data-for="student teacher" class="form__group">
+          <label><span id="schoolLabel">المدرسة</span><select name="schoolId"></select></label>
+          <small class="hint" id="schoolHint"></small>
+        </div>
+
+        <div data-for="student" class="form__group">
+          <label>الصف<select name="grade">
+            <option value="3">الثالث الابتدائي</option>
+            <option value="6">السادس الابتدائي</option>
+            <option value="9">الثالث المتوسط</option>
+          </select></label>
+        </div>
+
+        <div data-for="teacher" class="form__group">
+          <label>المادة التي تدرّسها<select name="subject">
+            <option value="math">الرياضيات</option>
+            <option value="reading">القراءة (لغتي)</option>
+            <option value="science">العلوم</option>
+          </select></label>
+        </div>
+
+        <div class="form__row">
+          <label>البريد الإلكتروني<input type="email" name="email" required autocomplete="email" dir="ltr"></label>
+          <label>رقم الجوال (اختياري)<input type="tel" name="phone" autocomplete="tel" dir="ltr"></label>
+        </div>
+        <div class="form__row">
+          <label>كلمة المرور<input type="password" name="password" required minlength="6" autocomplete="new-password" dir="ltr"></label>
+          <label>تأكيد كلمة المرور<input type="password" name="password2" required minlength="6" autocomplete="new-password" dir="ltr"></label>
+        </div>
+        <button type="submit" class="btn btn--primary btn--block">إنشاء الحساب</button>
+        <p class="form__msg" id="msg" role="status" aria-live="polite"></p>
+      </form>
+      <p class="auth__alt">لديك حساب؟ <a href="login.html">سجّل الدخول</a></p>
+    </div>
+  </main>
+
+  <script type="module">
+    import { configured, auth, db, A, F, errorText } from './js/fb.js';
+    import { h, setMsg, notConfiguredBox, STAGES } from './js/ui.js';
+
+    const form = document.getElementById('regForm');
+    const msg = document.getElementById('msg');
+    const NOTES = {
+      student: 'يُفعَّل حساب الطالب مباشرة. اختيار المدرسة اختياري، ويتيح لمعلميك متابعة نتائجك.',
+      teacher: 'يُفعَّل حساب المعلم بعد موافقة المدرسة أو إدارة المنصة.',
+      school: 'يُفعَّل حساب المدرسة بعد مراجعته من إدارة المنصة.'
+    };
+    let role = new URLSearchParams(location.search).get('role');
+    if (!NOTES[role]) role = 'student';
+    let schools = [];
+
+    STAGES.forEach(s => form.stage.append(h('option', { value: s }, s)));
+
+    function applyRole() {
+      document.querySelectorAll('[data-role]').forEach(b => {
+        const on = b.dataset.role === role;
+        b.classList.toggle('is-active', on);
+        b.setAttribute('aria-selected', String(on));
+      });
+      document.querySelectorAll('[data-for]').forEach(g => { g.hidden = !g.dataset.for.split(' ').includes(role); });
+      document.getElementById('roleNote').textContent = NOTES[role];
+      document.getElementById('nameLabel').textContent = role === 'school' ? 'اسم المسؤول (المدير أو الوكيل)' : 'الاسم الكامل';
+      document.getElementById('schoolLabel').textContent = role === 'teacher' ? 'المدرسة (مطلوب)' : 'المدرسة (اختياري)';
+      fillSchools();
+    }
+
+    function fillSchools() {
+      const sel = form.schoolId;
+      sel.replaceChildren(h('option', { value: '' }, role === 'teacher' ? '— اختر مدرستك —' : 'بدون مدرسة (حساب مستقل)'));
+      schools.forEach(s => sel.append(h('option', { value: s.id }, s.city ? `${s.name} — ${s.city}` : s.name)));
+      document.getElementById('schoolHint').textContent = schools.length ? ''
+        : 'لا توجد مدارس مفعّلة بعد. إذا لم تجد مدرستك فاطلب منها التسجيل في المنصة.';
+    }
+
+    document.querySelectorAll('[data-role]').forEach(b => b.addEventListener('click', () => {
+      role = b.dataset.role;
+      history.replaceState(null, '', '?role=' + role);
+      applyRole();
+    }));
+    applyRole();
+
+    if (!configured) {
+      document.getElementById('setupNotice').append(notConfiguredBox());
+      form.querySelectorAll('input, select, button').forEach(x => { x.disabled = true; });
+    } else {
+      try {
+        const snap = await F.getDocs(F.query(F.collection(db, 'schools'), F.where('status', '==', 'active')));
+        schools = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+        fillSchools();
+      } catch (e) { console.error(e); }
+
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const v = k => (form[k].value || '').trim();
+        const missing = [];
+        if (!v('name')) missing.push('الاسم');
+        if (!v('email')) missing.push('البريد الإلكتروني');
+        if (role === 'school' && !v('schoolName')) missing.push('اسم المدرسة');
+        if (role === 'school' && !v('city')) missing.push('المدينة');
+        if (role === 'teacher' && !v('schoolId')) missing.push('المدرسة');
+        if (missing.length) return setMsg(msg, 'أكمل الحقول التالية: ' + missing.join('، '), 'err');
+        if (form.password.value.length < 6) return setMsg(msg, 'كلمة المرور يجب ألا تقل عن ٦ أحرف.', 'err');
+        if (form.password.value !== form.password2.value) return setMsg(msg, 'كلمتا المرور غير متطابقتين.', 'err');
+
+        const btn = form.querySelector('[type=submit]');
+        btn.disabled = true;
+        setMsg(msg, 'جارٍ إنشاء الحساب…');
+        try {
+          const cred = await A.createUserWithEmailAndPassword(auth, v('email'), form.password.value);
+          const uid = cred.user.uid;
+          const school = schools.find(s => s.id === v('schoolId'));
+          const profile = {
+            name: v('name'), email: cred.user.email, phone: v('phone'), role,
+            status: role === 'student' ? 'active' : 'pending',
+            schoolId: role === 'school' ? '' : v('schoolId'),
+            schoolName: role === 'school' ? v('schoolName') : (school ? school.name : ''),
+            grade: role === 'student' ? Number(form.grade.value) : 0,
+            subject: role === 'teacher' ? form.subject.value : '',
+            city: role === 'school' ? v('city') : (school ? school.city || '' : ''),
+            stage: role === 'school' ? form.stage.value : '',
+            createdAt: F.serverTimestamp()
+          };
+          const batch = F.writeBatch(db);
+          batch.set(F.doc(db, 'users', uid), profile);
+          if (role === 'school') {
+            batch.set(F.doc(db, 'schools', uid), {
+              name: profile.schoolName, city: profile.city, stage: profile.stage,
+              status: 'pending', createdAt: F.serverTimestamp()
+            });
+          }
+          await batch.commit();
+          location.replace('dashboard.html');
+        } catch (err) {
+          console.error(err);
+          setMsg(msg, errorText(err), 'err');
+          btn.disabled = false;
+        }
+      });
+    }
+  </script>
+</body>
+</html>

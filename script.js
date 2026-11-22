@@ -265,6 +265,16 @@ function breakdown(title, keyFn, nameFn) {
   return box;
 }
 
+function tally(keyFn) {
+  const out = {};
+  run.answers.forEach(a => {
+    const k = keyFn(a);
+    out[k] = out[k] || { ok: 0, n: 0 };
+    out[k].n++; if (a.ok) out[k].ok++;
+  });
+  return out;
+}
+
 function renderResult() {
   stopTimer();
   const S = BANK[subject];
@@ -283,6 +293,23 @@ function renderResult() {
     el('p', null, fmt(`نسبة الإجابات الصحيحة في ${S.name}: ${pct}% — الزمن: `) + clock(elapsed()))
   );
   card.append(top);
+
+  // Save the result for signed-in students (handled by js/site-auth.js).
+  const save = el('p', 'quiz__save');
+  const payload = {
+    subject, gradeFilter: String(setup.grade), domainFilter: setup.domain,
+    score, total, pct, durationSec: elapsed(),
+    byDomain: tally(a => a.item.d), byLevel: tally(a => a.item.l)
+  };
+  if (window.NAFES_saveResult) {
+    save.textContent = 'جارٍ حفظ النتيجة في لوحتك…';
+    window.NAFES_saveResult(payload)
+      .then(() => { save.textContent = '✔ حُفظت النتيجة في لوحة التحكم.'; save.classList.add('ok'); })
+      .catch(() => { save.textContent = 'تعذّر حفظ النتيجة. تحقق من اتصالك.'; save.classList.add('err'); });
+  } else {
+    save.append('لحفظ نتائجك ومتابعة تقدمك ', Object.assign(el('a', null, 'سجّل الدخول كطالب'), { href: 'login.html' }), '.');
+  }
+  top.append(save);
 
   card.append(
     breakdown('الأداء حسب المعيار', q => q.d, k => S.domains[k].name),
@@ -343,28 +370,6 @@ Object.values(BANK).forEach(S => {
   const lv = Object.entries(LEVELS).map(([k, name]) => `${name} ${S.items.filter(q => q.l === k).length}`).join(' · ');
   box.append(el('p', 'std__levels', fmt('المستويات المعرفية: ' + lv)));
   map.append(box);
-});
-
-// ---------- Contact form ----------
-// Client-side validation only; connect to a backend or form service to receive submissions.
-const form = document.getElementById('contactForm');
-const msg = document.getElementById('formMsg');
-form.addEventListener('submit', e => {
-  e.preventDefault();
-  let valid = true;
-  form.querySelectorAll('[required]').forEach(f => {
-    const ok = f.value.trim() !== '' && f.checkValidity();
-    f.classList.toggle('invalid', !ok);
-    if (!ok) valid = false;
-  });
-  if (!valid) {
-    msg.textContent = 'يرجى تعبئة الحقول المطلوبة بشكل صحيح.';
-    msg.className = 'form__msg err';
-    return;
-  }
-  msg.textContent = 'شكراً لك! تم استلام طلبك وسنتواصل معك قريباً.';
-  msg.className = 'form__msg ok';
-  form.reset();
 });
 
 document.getElementById('year').textContent = new Date().getFullYear();

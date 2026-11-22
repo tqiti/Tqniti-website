@@ -1,0 +1,94 @@
+rules_version = '2';
+
+// قواعد أمان قاعدة بيانات «إنجاز نافس»
+// الأدوار: student (طالب) · teacher (معلم) · school (مدرسة) · admin (مدير النظام)
+// الحالات: active (مفعّل) · pending (بانتظار الموافقة) · suspended (موقوف)
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function isActive() { return signedIn() && me().status == 'active'; }
+    function isRole(r) { return isActive() && me().role == r; }
+    function isAdmin() { return isRole('admin'); }
+    function activeSchool(sid) {
+      return exists(/databases/$(database)/documents/schools/$(sid))
+        && get(/databases/$(database)/documents/schools/$(sid)).data.status == 'active';
+    }
+    function changedOnly(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
+
+    // ---------- المستخدمون ----------
+    match /users/{uid} {
+      allow read: if signedIn() && (
+        request.auth.uid == uid
+        || isAdmin()
+        || (isRole('school') && resource.data.schoolId == request.auth.uid)
+        || (isRole('teacher') && me().schoolId != '' && resource.data.schoolId == me().schoolId && resource.data.role == 'student')
+      );
+
+      // التسجيل الذاتي: لا يمكن لأحد أن يسجّل نفسه مديراً، والطالب وحده يُفعَّل مباشرة
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'email', 'phone', 'role', 'status', 'schoolId', 'schoolName', 'grade', 'subject', 'city', 'stage', 'createdAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.createdAt == request.time
+        && (
+          (request.resource.data.role == 'student' && request.resource.data.status == 'active'
+            && request.resource.data.grade in [3, 6, 9]
+            && (request.resource.data.schoolId == '' || activeSchool(request.resource.data.schoolId)))
+          || (request.resource.data.role == 'teacher' && request.resource.data.status == 'pending'
+            && request.resource.data.subject in ['math', 'reading', 'science']
+            && activeSchool(request.resource.data.schoolId))
+          || (request.resource.data.role == 'school' && request.resource.data.status == 'pending'
+            && request.resource.data.schoolId == '')
+        );
+
+      allow update: if
+        // المدير: تغيير الدور والحالة لأي مستخدم
+        (isAdmin() && changedOnly(['role', 'status']) && request.resource.data.role in ['student', 'teacher', 'school', 'admin'])
+        // المدرسة: قبول أو إيقاف معلميها وطلابها فقط
+        || (isRole('school') && resource.data.schoolId == request.auth.uid
+            && resource.data.role in ['teacher', 'student']
+            && changedOnly(['status']) && request.resource.data.status in ['active', 'suspended'])
+        // المستخدم: تعديل بياناته الشخصية فقط
+        || (signedIn() && request.auth.uid == uid && changedOnly(['name', 'phone']));
+
+      allow delete: if isAdmin();
+    }
+
+    // ---------- المدارس ----------
+    match /schools/{sid} {
+      // المدارس المفعّلة تظهر للجميع في قائمة التسجيل
+      allow read: if resource.data.status == 'active'
+        || (signedIn() && (request.auth.uid == sid || isAdmin()));
+      allow create: if signedIn() && request.auth.uid == sid
+        && request.resource.data.keys().hasOnly(['name', 'city', 'stage', 'status', 'createdAt'])
+        && request.resource.data.status == 'pending'
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 120
+        && request.resource.data.createdAt == request.time;
+      allow update: if isAdmin() && changedOnly(['status']);
+      allow delete: if isAdmin();
+    }
+
+    // ---------- نتائج الاختبارات ----------
+    match /results/{rid} {
+      allow read: if signedIn() && (
+        resource.data.uid == request.auth.uid
+        || isAdmin()
+        || (isRole('school') && resource.data.schoolId == request.auth.uid)
+        || (isRole('teacher') && me().schoolId != '' && resource.data.schoolId == me().schoolId)
+      );
+      allow create: if isRole('student')
+        && request.resource.data.keys().hasOnly(['uid', 'schoolId', 'studentName', 'studentGrade', 'subject', 'gradeFilter', 'domainFilter',
+                                                 'score', 'total', 'pct', 'byDomain', 'byLevel', 'durationSec', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.schoolId == me().schoolId
+        && request.resource.data.subject in ['math', 'reading', 'science']
+        && request.resource.data.total is int && request.resource.data.total > 0 && request.resource.data.total <= 100
+        && request.resource.data.score is int && request.resource.data.score >= 0 && request.resource.data.score <= request.resource.data.total
+        && request.resource.data.createdAt == request.time;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+  }
+}
