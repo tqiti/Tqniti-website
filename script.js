@@ -156,10 +156,11 @@ function renderSetup() {
 function startRun() {
   let list = shuffle(pool());
   if (setup.count !== 'all') list = list.slice(0, Number(setup.count));
-  // Keep questions about the same reading passage together.
+  // Keep questions about the same reading passage or figure together.
+  const group = q => q.p || q.f || q;
   const first = new Map();
-  list.forEach((q, i) => { const k = q.p || q; if (!first.has(k)) first.set(k, i); });
-  list.sort((x, y) => first.get(x.p || x) - first.get(y.p || y));
+  list.forEach((q, i) => { const k = group(q); if (!first.has(k)) first.set(k, i); });
+  list.sort((x, y) => first.get(group(x)) - first.get(group(y)));
 
   run = { list, idx: 0, answers: [], start: Date.now() };
   stopTimer();
@@ -171,7 +172,24 @@ function startRun() {
   document.getElementById('practice').scrollIntoView({ block: 'start' });
 }
 
+// Figure (vector SVG drawn by questions/figures.js) with a full-screen zoom toggle.
+function figureBlock(fid) {
+  const fig = el('figure', 'quiz__fig');
+  const zoom = el('button', 'quiz__zoom', '⤢ تكبير');
+  zoom.type = 'button';
+  zoom.addEventListener('click', () => {
+    const on = fig.classList.toggle('is-zoomed');
+    zoom.textContent = on ? '✕ إغلاق' : '⤢ تكبير';
+    document.body.style.overflow = on ? 'hidden' : '';
+  });
+  const holder = el('div');
+  holder.innerHTML = window.NAFES_FIGS[fid](); // trusted, generated locally
+  fig.append(el('figcaption', null, 'تأمّل الشكل ثم أجب'), zoom, holder);
+  return fig;
+}
+
 function renderQuestion() {
+  document.body.style.overflow = '';
   const S = BANK[subject];
   const { list, idx } = run;
   const item = list[idx];
@@ -200,6 +218,8 @@ function renderQuestion() {
     box.append(el('b', null, `اقرأ النص ثم أجب — «${P.title}»`), el('p', null, fmt(P.text)));
     card.append(box);
   }
+
+  if (item.f && window.NAFES_FIGS && window.NAFES_FIGS[item.f]) card.append(figureBlock(item.f));
 
   card.append(el('h3', 'quiz__q', fmt(item.q)));
   const opts = el('div', 'quiz__opts');
@@ -348,6 +368,15 @@ function renderResult() {
 
 renderSetup();
 
+// Question counts shown on the page
+(() => {
+  const all = Object.values(BANK).flatMap(S => S.items);
+  const set = (k, v) => document.querySelectorAll(`[data-stat="${k}"]`).forEach(e => { e.textContent = v; });
+  set('total', fmt(all.length));
+  set('totalq', qCount(all.length));
+  set('figs', qCount(all.filter(q => q.f).length));
+})();
+
 // ---------- Standards map ----------
 const map = document.getElementById('stdMap');
 Object.values(BANK).forEach(S => {
@@ -367,6 +396,8 @@ Object.values(BANK).forEach(S => {
     ul.append(li);
   });
   box.append(ul);
+  const figs = S.items.filter(q => q.f).length;
+  if (figs) box.append(el('p', 'std__levels', 'منها ' + qCount(figs) + ' على أشكال ورسوم بيانية'));
   const lv = Object.entries(LEVELS).map(([k, name]) => `${name} ${S.items.filter(q => q.l === k).length}`).join(' · ');
   box.append(el('p', 'std__levels', fmt('المستويات المعرفية: ' + lv)));
   map.append(box);
