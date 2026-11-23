@@ -45,6 +45,7 @@ const AUTH_ERRORS = {
   'auth/too-many-requests': 'محاولات كثيرة. انتظر قليلاً ثم حاول مجدداً.',
   'auth/network-request-failed': 'تعذّر الاتصال. تحقق من الإنترنت.',
   'auth/operation-not-allowed': 'تسجيل الدخول بالبريد غير مفعّل في مشروع Firebase.',
+  'auth/configuration-not-found': 'خدمة تسجيل الدخول غير مفعّلة بعد في مشروع Firebase.',
   'permission-denied': 'ليست لديك صلاحية لهذا الإجراء.'
 };
 export const errorText = e => AUTH_ERRORS[e && e.code] || 'حدث خطأ غير متوقع. حاول مرة أخرى.';
