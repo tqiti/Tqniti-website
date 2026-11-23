@@ -25,9 +25,11 @@ export function h(tag, props, ...kids) {
   return n;
 }
 
+// Returns a valid Date or null (tolerates missing or hand-edited values).
 export function toDate(ts) {
   if (!ts) return null;
-  return typeof ts.toDate === 'function' ? ts.toDate() : new Date(ts);
+  const d = typeof ts.toDate === 'function' ? ts.toDate() : new Date(ts);
+  return isNaN(d) ? null : d;
 }
 export function dateText(ts) {
   const d = toDate(ts);
