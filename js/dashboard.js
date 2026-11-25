@@ -1,5 +1,5 @@
 // لوحة التحكم: واجهة مختلفة لكل دور (طالب، معلم، مدرسة، مدير النظام)
-import { configured, db, F, onUser, logout, errorText } from './fb.js';
+import { configured, db, F, onUser, logout, errorText, createAccount, changePassword, USER_DOMAIN, usernameOf } from './fb.js';
 import { h, fmt, ROLES, STATUS, GRADES, SUBJECTS, dateText, toDate, downloadCSV, notConfiguredBox } from './ui.js';
 
 const BANK = window.NAFES_BANK || {};
@@ -168,16 +168,149 @@ async function teacherView(me) {
       resultsTable(results.slice(0, 50))));
 }
 
+// ---------- Accounts created by a school ----------
+const ALPH = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'; // no 0/O, 1/l/I
+const rand = n => crypto.getRandomValues(new Uint32Array(n));
+const genPassword = (n = 8) => Array.from(rand(n), x => ALPH[x % ALPH.length]).join('');
+const genUsername = role => (role === 'teacher' ? 't' : 's') + String(100000 + (rand(1)[0] % 900000));
+const loginUrl = () => new URL('login.html', location.href).href;
+const userId = u => usernameOf(u.email) || u.email;
+// Arabic counted noun for «حساب»
+const accCount = n => n === 1 ? 'حساب واحد' : n === 2 ? 'حسابان' : (n % 100 >= 3 && n % 100 <= 10) ? fmt(n) + ' حسابات' : n % 100 >= 11 ? fmt(n) + ' حساباً' : fmt(n) + ' حساب';
+const roleDetail = c => c.role === 'student' ? `طالب · ${gradeText(c.grade)}` : `معلم · ${SUBJECTS[c.subject] || ''}`;
+
+async function createMember(me, { name, role, grade, subject }) {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const username = genUsername(role), password = genPassword(), email = `${username}@${USER_DOMAIN}`;
+    let uid;
+    try { uid = await createAccount(email, password); }
+    catch (e) { if (e.code === 'auth/email-already-in-use') continue; throw e; }
+    const profile = {
+      name, email, phone: '', role, status: 'active', schoolId: me.uid, schoolName: me.schoolName,
+      grade: role === 'student' ? grade : 0, subject: role === 'teacher' ? subject : '', city: me.city || '', stage: '',
+      username, createdBy: me.uid, createdAt: F.serverTimestamp()
+    };
+    const cred = { username, password, name, role, grade: profile.grade, subject: profile.subject, schoolId: me.uid, createdAt: F.serverTimestamp() };
+    const batch = F.writeBatch(db);
+    batch.set(F.doc(db, 'users', uid), profile);
+    batch.set(F.doc(db, 'credentials', uid), cred);
+    await batch.commit();
+    const now = new Date();
+    return { user: { id: uid, ...profile, createdAt: now }, cred: { id: uid, ...cred, createdAt: now, fresh: true } };
+  }
+  throw Object.assign(new Error('username'), { code: 'username-collision' });
+}
+
+function printCards(rows, schoolName) {
+  document.getElementById('printArea')?.remove();
+  const area = h('div', { id: 'printArea' }, rows.map(c => h('div', { class: 'pcard' },
+    h('div', { class: 'pcard__brand' }, 'إنجاز نافس'),
+    h('b', { class: 'pcard__name' }, c.name),
+    h('span', { class: 'pcard__meta' }, `${roleDetail(c)} · ${schoolName}`),
+    h('dl', null,
+      h('dt', null, 'اسم المستخدم'), h('dd', { dir: 'ltr' }, c.username),
+      h('dt', null, 'كلمة المرور'), h('dd', { dir: 'ltr' }, c.password)),
+    h('small', { dir: 'ltr' }, loginUrl()))));
+  document.body.append(area);
+  document.body.classList.add('printing');
+  const done = () => { document.body.classList.remove('printing'); area.remove(); window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  setTimeout(() => window.print(), 50);
+}
+
+function credentialsCSV(rows, schoolName) {
+  downloadCSV('nafes-accounts.csv', [
+    ['الاسم', 'النوع', 'الصف أو المادة', 'اسم المستخدم', 'كلمة المرور', 'المدرسة', 'رابط الدخول'],
+    ...rows.map(c => [c.name, ROLES[c.role], c.role === 'student' ? gradeText(c.grade) : (SUBJECTS[c.subject] || ''), c.username, c.password, schoolName, loginUrl()])
+  ]);
+}
+
+// The add-accounts form is built once so typed names and messages survive re-renders.
+function addAccountsPanel(me, onCreated) {
+  const opt = (v, t) => h('option', { value: v }, t);
+  const role = h('select', { id: 'newRole' }, opt('student', 'طلاب'), opt('teacher', 'معلمون'));
+  const grade = h('select', { id: 'newGrade' }, Object.entries(GRADES).map(([k, v]) => opt(k, v)));
+  const subject = h('select', { id: 'newSubject' }, Object.entries(SUBJECTS).map(([k, v]) => opt(k, v)));
+  const gradeWrap = h('label', null, 'الصف', grade);
+  const subjWrap = h('label', { hidden: true }, 'المادة', subject);
+  const names = h('textarea', { id: 'newNames', rows: 6, placeholder: 'اكتب اسماً واحداً في كل سطر، مثل:\nمحمد أحمد العتيبي\nسارة خالد الشهري' });
+  const msg = h('p', { class: 'form__msg', role: 'status', 'aria-live': 'polite' });
+  const go = h('button', { type: 'button', class: 'btn btn--primary' }, 'إنشاء الحسابات');
+  role.addEventListener('change', () => { gradeWrap.hidden = role.value !== 'student'; subjWrap.hidden = role.value !== 'teacher'; });
+
+  go.addEventListener('click', async () => {
+    const lines = names.value.split('\n').map(x => x.trim().replace(/\s+/g, ' ')).filter(Boolean);
+    if (!lines.length) { msg.textContent = 'اكتب اسماً واحداً على الأقل.'; msg.className = 'form__msg err'; return; }
+    if (lines.length > 100) { msg.textContent = 'أنشئ ١٠٠ حساب كحد أقصى في كل مرة.'; msg.className = 'form__msg err'; return; }
+    if (lines.some(n => n.length > 100)) { msg.textContent = 'أحد الأسماء أطول من ١٠٠ حرف.'; msg.className = 'form__msg err'; return; }
+    go.disabled = true;
+    const made = [], failed = [];
+    let stopped = '';
+    for (let i = 0; i < lines.length; i++) {
+      msg.textContent = fmt(`جارٍ إنشاء الحساب ${i + 1} من ${lines.length}…`); msg.className = 'form__msg';
+      try {
+        made.push(await createMember(me, { name: lines[i], role: role.value, grade: Number(grade.value), subject: subject.value }));
+      } catch (e) {
+        console.error(e);
+        failed.push(lines[i]);
+        if (['auth/too-many-requests', 'auth/quota-exceeded', 'permission-denied', 'auth/network-request-failed'].includes(e.code)) {
+          stopped = errorText(e);
+          failed.push(...lines.slice(i + 1));
+          break;
+        }
+      }
+    }
+    names.value = failed.join('\n');
+    go.disabled = false;
+    onCreated(made);
+    msg.textContent = (made.length ? `تم إنشاء ${accCount(made.length)}.` : 'لم يُنشأ أي حساب.') + (failed.length && made.length ? ` لم يُنشأ ${accCount(failed.length)}، وبقيت الأسماء في المربع لإعادة المحاولة.` : '') + (stopped ? ' ' + stopped : '');
+    msg.className = 'form__msg ' + (failed.length ? 'err' : 'ok');
+  });
+
+  return panel('إضافة طلاب ومعلمين', null,
+    h('p', { class: 'muted' }, 'يُنشأ لكل اسم حساب مفعّل باسم مستخدم وكلمة مرور عشوائية، ويظهر في جدول «بيانات الدخول» أدناه لتطبعه أو تنزّله.'),
+    h('div', { class: 'add-form' },
+      h('div', { class: 'add-form__row' }, h('label', null, 'نوع الحسابات', role), gradeWrap, subjWrap),
+      h('label', null, 'الأسماء', names),
+      h('div', { class: 'add-form__actions' }, go, msg)),
+    h('p', { class: 'hint' }, 'يسمح Firebase افتراضياً بإنشاء ١٠٠ حساب في الساعة. لأعداد أكبر ارفع الحد من Authentication ← Settings ← Sign-up quota.'));
+}
+
 async function schoolView(me) {
   const [members, results] = await Promise.all([
     list(F.query(col('users'), F.where('schoolId', '==', me.uid))),
     list(F.query(col('results'), F.where('schoolId', '==', me.uid)))
   ]);
   results.sort(byDateDesc);
+  // Saved credentials need the updated security rules; without them the rest still works.
+  let creds = null;
+  try { creds = (await list(F.query(col('credentials'), F.where('schoolId', '==', me.uid)))).sort(byDateDesc); }
+  catch (e) { console.warn('credentials unavailable', e); }
+
+  const addPanel = creds ? addAccountsPanel(me, made => {
+    made.forEach(({ user, cred }) => { members.push(user); creds.unshift(cred); });
+    render();
+  }) : panel('إضافة طلاب ومعلمين', null, h('div', { class: 'notice' },
+    h('b', null, 'هذه الميزة تحتاج تحديث قواعد الأمان في Firebase.'),
+    h('p', null, 'اطلب من مدير المنصة نشر النسخة الجديدة من ملف firestore.rules، ثم حدّث الصفحة.')));
+
   const render = () => {
     const teachers = members.filter(m => m.role === 'teacher');
     const students = members.filter(m => m.role === 'student');
     const pending = members.filter(m => m.status === 'pending');
+    const credPanel = creds ? panel(fmt(`بيانات الدخول (${creds.length})`),
+      creds.length ? h('div', { class: 'panel__actions' },
+        h('button', { type: 'button', class: 'btn btn--xs btn--primary', onclick: () => printCards(creds, me.schoolName) }, 'طباعة بطاقات الدخول'),
+        h('button', { type: 'button', class: 'btn btn--xs btn--ghost', onclick: () => credentialsCSV(creds, me.schoolName) }, 'تنزيل CSV')) : null,
+      h('p', { class: 'muted' }, 'كلمات المرور الأولية للحسابات التي أنشأتها المدرسة. تختفي كلمة المرور من هنا عندما يغيّرها صاحب الحساب.'),
+      table([
+        ['الاسم', c => h('span', null, c.name, c.fresh ? h('span', { class: 'badge badge--active new-tag' }, 'جديد') : null)],
+        ['النوع', roleDetail],
+        ['اسم المستخدم', c => h('code', { dir: 'ltr' }, c.username)],
+        ['كلمة المرور', c => h('code', { dir: 'ltr' }, c.password)],
+        ['', c => h('button', { type: 'button', class: 'btn btn--xs btn--ghost', onclick: () => printCards([c], me.schoolName) }, 'طباعة')]
+      ], creds, 'لم تُنشأ حسابات من المدرسة بعد.')) : null;
+
     show(
       h('div', { class: 'dash__head' },
         h('div', null, h('h1', null, me.schoolName), h('p', { class: 'muted' }, `${me.city || ''} · ${me.stage || ''} · المسؤول: ${me.name}`))),
@@ -187,15 +320,18 @@ async function schoolView(me) {
         ['الاسم', m => m.name], ['النوع', m => ROLES[m.role]], ['المادة', m => SUBJECTS[m.subject] || '—'],
         ['البريد', m => h('span', { dir: 'ltr' }, m.email)], ['التاريخ', m => dateText(m.createdAt)], ['الإجراء', m => statusActions(m, render)]
       ], pending)) : null,
+      addPanel,
+      credPanel,
       panel('أداء المدرسة حسب المعايير', null, subjectReport(results)),
       panel('المعلمون', null, table([
-        ['الاسم', m => m.name], ['المادة', m => SUBJECTS[m.subject] || '—'], ['البريد', m => h('span', { dir: 'ltr' }, m.email)],
+        ['الاسم', m => m.name], ['المادة', m => SUBJECTS[m.subject] || '—'], ['اسم المستخدم / البريد', m => h('span', { dir: 'ltr' }, userId(m))],
         ['الحالة', m => badge(m.status)], ['الإجراء', m => statusActions(m, render)]
-      ], teachers, 'لم ينضم معلمون بعد.')),
+      ], teachers, 'لا يوجد معلمون بعد.')),
       panel('الطلاب', null, table([
-        ['الاسم', s => s.name], ['الصف', s => gradeText(s.grade)], ['الاختبارات', s => fmt(s.tests)], ['المتوسط', s => pctText(s.avg)],
+        ['الاسم', s => s.name], ['الصف', s => gradeText(s.grade)], ['اسم المستخدم / البريد', s => h('span', { dir: 'ltr' }, userId(s))],
+        ['الاختبارات', s => fmt(s.tests)], ['المتوسط', s => pctText(s.avg)],
         ['الحالة', s => badge(s.status)], ['الإجراء', s => statusActions(s, render)]
-      ], studentRows(students, results), 'لم ينضم طلاب بعد.')),
+      ], studentRows(students, results), 'لا يوجد طلاب بعد.')),
       panel('أحدث النتائج', h('button', { type: 'button', class: 'btn btn--xs btn--ghost', onclick: () => resultsCSV(results) }, 'تصدير CSV'),
         resultsTable(results.slice(0, 100))));
   };
@@ -287,7 +423,7 @@ async function adminView(me) {
       return [panel(fmt(`المستخدمون (${rows.length})`), exportBtn,
         h('div', { class: 'toolbar' }, search, roleF, statusF),
         table([
-          ['الاسم', u => u.name], ['البريد', u => h('span', { dir: 'ltr' }, u.email)], ['الدور', roleSelect],
+          ['الاسم', u => u.name], ['اسم المستخدم / البريد', u => h('span', { dir: 'ltr' }, userId(u))], ['الدور', roleSelect],
           ['المدرسة', schoolOf], ['التفاصيل', u => u.role === 'student' ? gradeText(u.grade) : u.role === 'teacher' ? (SUBJECTS[u.subject] || '—') : '—'],
           ['الحالة', u => badge(u.status)], ['التسجيل', u => dateText(u.createdAt)], ['الإجراء', u => statusActions(u, rerender, me)]
         ], rows, 'لا يوجد مستخدمون مطابقون.'))];
@@ -327,6 +463,39 @@ async function adminView(me) {
   renderTab();
 }
 
+function passwordDialog() {
+  const field = (label, id, ac) => h('label', null, label, h('input', { type: 'password', id, autocomplete: ac, dir: 'ltr', required: true, minlength: 6 }));
+  const msg = h('p', { class: 'form__msg', role: 'status', 'aria-live': 'polite' });
+  const save = h('button', { type: 'submit', class: 'btn btn--primary' }, 'حفظ');
+  const cancel = h('button', { type: 'button', class: 'btn btn--ghost' }, 'إلغاء');
+  const form = h('form', { class: 'form form--flat' },
+    h('h2', null, 'تغيير كلمة المرور'),
+    field('كلمة المرور الحالية', 'pwCur', 'current-password'),
+    field('كلمة المرور الجديدة (٦ أحرف على الأقل)', 'pwNew', 'new-password'),
+    field('تأكيد كلمة المرور الجديدة', 'pwNew2', 'new-password'),
+    h('div', { class: 'add-form__actions' }, save, cancel), msg);
+  const dlg = h('dialog', { class: 'dlg' }, form);
+  cancel.addEventListener('click', () => dlg.close());
+  dlg.addEventListener('close', () => dlg.remove());
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const cur = form.pwCur.value, nw = form.pwNew.value;
+    if (nw.length < 6) { msg.textContent = 'كلمة المرور الجديدة يجب ألا تقل عن ٦ أحرف.'; msg.className = 'form__msg err'; return; }
+    if (nw !== form.pwNew2.value) { msg.textContent = 'كلمتا المرور غير متطابقتين.'; msg.className = 'form__msg err'; return; }
+    save.disabled = true;
+    try {
+      await changePassword(cur, nw);
+      msg.textContent = '✔ تم تغيير كلمة المرور.'; msg.className = 'form__msg ok';
+      setTimeout(() => dlg.close(), 1200);
+    } catch (err) {
+      msg.textContent = err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' ? 'كلمة المرور الحالية غير صحيحة.' : errorText(err);
+      msg.className = 'form__msg err'; save.disabled = false;
+    }
+  });
+  document.body.append(dlg);
+  dlg.showModal();
+}
+
 const VIEWS = { student: studentView, teacher: teacherView, school: schoolView, admin: adminView };
 
 // ---------- Boot ----------
@@ -337,6 +506,7 @@ if (!configured) {
     if (!me) return location.replace('login.html');
     who.replaceChildren(
       h('span', { class: 'who__name' }, me.name || me.email, me.role ? h('small', null, ROLES[me.role]) : null),
+      h('button', { type: 'button', class: 'btn btn--xs btn--ghost', onclick: passwordDialog }, 'كلمة المرور'),
       h('button', { type: 'button', class: 'btn btn--xs btn--ghost', onclick: logout }, 'خروج'));
 
     if (!me.hasProfile) {

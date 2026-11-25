@@ -24,7 +24,7 @@
       <p class="auth__sub">أهلاً بعودتك! أدخل بياناتك للوصول إلى لوحة التحكم.</p>
       <div id="setupNotice"></div>
       <form class="form form--flat" id="loginForm" novalidate>
-        <label>البريد الإلكتروني<input type="email" name="email" required autocomplete="email" dir="ltr"></label>
+        <label>البريد الإلكتروني أو اسم المستخدم<input type="text" name="email" required autocomplete="username" autocapitalize="none" spellcheck="false" dir="ltr"></label>
         <label>كلمة المرور<input type="password" name="password" required autocomplete="current-password" dir="ltr"></label>
         <button type="submit" class="btn btn--primary btn--block">دخول</button>
         <button type="button" class="link-btn" id="resetBtn">نسيت كلمة المرور؟</button>
@@ -35,7 +35,7 @@
   </main>
 
   <script type="module">
-    import { configured, auth, A, onUser, errorText } from './js/fb.js';
+    import { configured, auth, A, onUser, errorText, toLoginEmail } from './js/fb.js';
     import { setMsg, notConfiguredBox } from './js/ui.js';
 
     const form = document.getElementById('loginForm');
@@ -50,12 +50,12 @@
       form.addEventListener('submit', async e => {
         e.preventDefault();
         const email = form.email.value.trim(), password = form.password.value;
-        if (!email || !password) return setMsg(msg, 'أدخل البريد الإلكتروني وكلمة المرور.', 'err');
+        if (!email || !password) return setMsg(msg, 'أدخل البريد الإلكتروني (أو اسم المستخدم) وكلمة المرور.', 'err');
         const btn = form.querySelector('[type=submit]');
         btn.disabled = true;
         setMsg(msg, 'جارٍ تسجيل الدخول…');
         try {
-          await A.signInWithEmailAndPassword(auth, email, password);
+          await A.signInWithEmailAndPassword(auth, toLoginEmail(email), password);
           location.replace('dashboard.html');
         } catch (err) {
           setMsg(msg, errorText(err), 'err');
@@ -66,6 +66,7 @@
       document.getElementById('resetBtn').addEventListener('click', async () => {
         const email = form.email.value.trim();
         if (!email) return setMsg(msg, 'اكتب بريدك الإلكتروني أولاً ثم اضغط «نسيت كلمة المرور».', 'err');
+        if (!email.includes('@')) return setMsg(msg, 'حسابك أنشأته مدرستك. اطلب منها بيانات الدخول من لوحة المدرسة.', 'err');
         try {
           await A.sendPasswordResetEmail(auth, email);
           setMsg(msg, 'إذا كان البريد مسجّلاً فستصلك رسالة لإعادة تعيين كلمة المرور.', 'ok');

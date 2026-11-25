@@ -529,3 +529,37 @@ h2 { font-size: clamp(1.6rem, 3vw, 2.4rem); line-height: 1.35; font-weight: 800;
 .fig-svg .ph8 { fill: #14b8a6; } .fig-svg .ph9 { fill: #06b6d4; } .fig-svg .ph10 { fill: #3b82f6; } .fig-svg .ph11 { fill: #4f46e5; }
 .fig-svg .ph12 { fill: #7c3aed; } .fig-svg .ph13 { fill: #6d28d9; } .fig-svg .ph14 { fill: #581c87; }
 @media (max-width: 620px) { .quiz__fig { padding: 10px; } }
+
+/* School: add accounts, credentials, print cards, password dialog */
+.add-form { display: grid; gap: 14px; }
+.add-form__row { display: flex; gap: 14px; flex-wrap: wrap; }
+.add-form label { display: grid; gap: 6px; font-weight: 500; font-size: .95rem; min-width: 180px; }
+.add-form select, .add-form textarea, .dlg input {
+  font-family: inherit; font-size: 1rem; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text); width: 100%;
+}
+.add-form textarea { resize: vertical; line-height: 1.8; }
+.add-form select:focus, .add-form textarea:focus, .dlg input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(13,148,136,.15); }
+.add-form__actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.add-form__actions .form__msg { text-align: start; margin: 0; }
+.panel .hint { margin: 0; }
+.tbl code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .95rem; background: var(--bg-alt); padding: 2px 8px; border-radius: 6px; letter-spacing: .03em; }
+.new-tag { margin-inline-start: 8px; font-size: .72rem; }
+.dlg { border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; width: min(420px, calc(100% - 32px)); background: var(--card); color: var(--text); box-shadow: var(--shadow); }
+.dlg::backdrop { background: rgba(15, 23, 42, .45); }
+.dlg h2 { font-size: 1.2rem; margin: 0; }
+.dlg .form { gap: 14px; }
+#printArea { display: none; }
+@media print {
+  body.printing > *:not(#printArea) { display: none !important; }
+  body.printing { background: #fff; }
+  body.printing #printArea { display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; padding: 0; }
+  .pcard { border: 1.5px dashed #64748b; border-radius: 10px; padding: 6mm; break-inside: avoid; color: #0f172a; display: grid; gap: 2mm; font-size: 11pt; }
+  .pcard__brand { color: #0f766e; font-weight: 800; font-size: 10pt; }
+  .pcard__name { font-size: 14pt; }
+  .pcard__meta { color: #475569; font-size: 9.5pt; }
+  .pcard dl { display: grid; grid-template-columns: auto 1fr; gap: 1mm 4mm; margin: 2mm 0 0; }
+  .pcard dt { color: #475569; }
+  .pcard dd { margin: 0; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13pt; font-weight: 700; text-align: left; }
+  .pcard small { color: #64748b; font-size: 8pt; word-break: break-all; }
+}

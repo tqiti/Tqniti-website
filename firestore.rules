@@ -43,6 +43,21 @@ service cloud.firestore {
             && request.resource.data.schoolId == '')
         );
 
+      // المدرسة المفعّلة تنشئ حسابات مفعّلة لطلابها ومعلميها (اسم مستخدم على النطاق المحجوز)
+      allow create: if isRole('school')
+        && request.resource.data.keys().hasOnly(['name', 'email', 'phone', 'role', 'status', 'schoolId', 'schoolName', 'grade', 'subject', 'city', 'stage', 'username', 'createdBy', 'createdAt'])
+        && request.resource.data.schoolId == request.auth.uid
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.status == 'active'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100
+        && request.resource.data.username is string && request.resource.data.username.matches('^[st][0-9]{6}$')
+        && request.resource.data.email == request.resource.data.username + '@accounts.enjaz.invalid'
+        && (
+          (request.resource.data.role == 'student' && request.resource.data.grade in [3, 6, 9])
+          || (request.resource.data.role == 'teacher' && request.resource.data.subject in ['math', 'reading', 'science'])
+        );
+
       allow update: if
         // المدير: تغيير الدور والحالة لأي مستخدم
         (isAdmin() && changedOnly(['role', 'status']) && request.resource.data.role in ['student', 'teacher', 'school', 'admin'])
@@ -68,6 +83,21 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time;
       allow update: if isAdmin() && changedOnly(['status']);
       allow delete: if isAdmin();
+    }
+
+    // ---------- بيانات الدخول الأولية للحسابات التي أنشأتها المدرسة ----------
+    // تقرؤها المدرسة صاحبة الحساب والمدير فقط، وتُحذف عندما يغيّر صاحب الحساب كلمة مروره.
+    match /credentials/{uid} {
+      allow read: if isAdmin() || (isRole('school') && resource.data.schoolId == request.auth.uid);
+      allow create: if isRole('school')
+        && request.resource.data.keys().hasOnly(['username', 'password', 'name', 'role', 'grade', 'subject', 'schoolId', 'createdAt'])
+        && request.resource.data.schoolId == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/users/$(uid)).data.schoolId == request.auth.uid
+        && getAfter(/databases/$(database)/documents/users/$(uid)).data.username == request.resource.data.username;
+      allow update: if false;
+      allow delete: if signedIn() && (request.auth.uid == uid || isAdmin()
+        || (isRole('school') && resource.data.schoolId == request.auth.uid));
     }
 
     // ---------- نتائج الاختبارات ----------
